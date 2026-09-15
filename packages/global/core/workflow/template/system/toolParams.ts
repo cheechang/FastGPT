@@ -1,20 +1,28 @@
 import { FlowNodeTypeEnum } from '../../node/constant';
-import { FlowNodeTemplateType } from '../../type/node';
-import { FlowNodeTemplateTypeEnum } from '../../constants';
-import { getHandleConfig } from '../utils';
-import { i18nT } from '../../../../../web/i18n/utils';
+import { type FlowNodeTemplateType } from '../../type/node';
+import { FlowNodeTemplateTypeEnum, NodeOutputKeyEnum } from '../../constants';
+import { createShowInContext } from '../context';
+import { i18nT } from '../../../../common/i18n/utils';
 
 export const ToolParamsNode: FlowNodeTemplateType = {
   id: FlowNodeTypeEnum.toolParams,
   templateType: FlowNodeTemplateTypeEnum.ai,
   flowNodeType: FlowNodeTypeEnum.toolParams,
-  sourceHandle: getHandleConfig(true, true, true, true),
-  targetHandle: getHandleConfig(true, true, true, true),
+  showSourceHandle: true,
+  showTargetHandle: true,
   avatar: 'core/workflow/template/toolParams',
+  avatarLinear: 'core/workflow/template/toolParamsLinear',
+  colorSchema: 'indigo',
   name: i18nT('workflow:tool_custom_field'),
   intro: i18nT('workflow:intro_tool_params_config'),
-  version: '4811',
   isTool: true,
+  isShowInContext: (ctx) =>
+    !!ctx &&
+    (ctx.isSidebar
+      ? ctx.hasToolNode
+      : createShowInContext([
+          { sourceType: FlowNodeTypeEnum.toolCall, handleId: NodeOutputKeyEnum.selectedTools }
+        ])(ctx)),
   inputs: [],
   outputs: []
 };

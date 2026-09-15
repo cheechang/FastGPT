@@ -1,20 +1,21 @@
 import {
   datasetQuoteValueDesc,
+  datasetSelectValueDesc,
   FlowNodeInputTypeEnum,
   FlowNodeOutputTypeEnum,
   FlowNodeTypeEnum
 } from '../../node/constant';
-import { FlowNodeTemplateType } from '../../type/node';
+import { type FlowNodeTemplateType } from '../../type/node';
 import {
   WorkflowIOValueTypeEnum,
   NodeInputKeyEnum,
   NodeOutputKeyEnum,
   FlowNodeTemplateTypeEnum
 } from '../../constants';
-import { Input_Template_UserChatInput } from '../input';
+import { Input_Template_Dataset_Tag_Filter_Version, Input_Template_UserChatInput } from '../input';
 import { DatasetSearchModeEnum } from '../../../dataset/constants';
-import { getHandleConfig } from '../utils';
-import { i18nT } from '../../../../../web/i18n/utils';
+import { i18nT } from '../../../../common/i18n/utils';
+import { Output_Template_Error_Message } from '../output';
 
 export const Dataset_SEARCH_DESC = i18nT('workflow:template.dataset_search_intro');
 
@@ -22,14 +23,18 @@ export const DatasetSearchModule: FlowNodeTemplateType = {
   id: FlowNodeTypeEnum.datasetSearchNode,
   templateType: FlowNodeTemplateTypeEnum.ai,
   flowNodeType: FlowNodeTypeEnum.datasetSearchNode,
-  sourceHandle: getHandleConfig(true, true, true, true),
-  targetHandle: getHandleConfig(true, true, true, true),
+  showSourceHandle: true,
+  showTargetHandle: true,
   avatar: 'core/workflow/template/datasetSearch',
+  avatarLinear: 'core/workflow/template/datasetSearchLinear',
+  colorSchema: 'blueLight',
   name: i18nT('workflow:template.dataset_search'),
   intro: Dataset_SEARCH_DESC,
   showStatus: true,
   isTool: true,
-  version: '481',
+  catchError: false,
+  courseUrl: '/guide/build/workflow/nodes/dataset_search',
+  version: '4.17.0',
   inputs: [
     {
       key: NodeInputKeyEnum.datasetSelectList,
@@ -37,7 +42,8 @@ export const DatasetSearchModule: FlowNodeTemplateType = {
       label: i18nT('common:core.module.input.label.Select dataset'),
       value: [],
       valueType: WorkflowIOValueTypeEnum.selectDataset,
-      required: true
+      required: true,
+      valueDesc: datasetSelectValueDesc
     },
     {
       key: NodeInputKeyEnum.datasetSimilarity,
@@ -51,7 +57,7 @@ export const DatasetSearchModule: FlowNodeTemplateType = {
       key: NodeInputKeyEnum.datasetMaxTokens,
       renderTypeList: [FlowNodeInputTypeEnum.hidden],
       label: '',
-      value: 1500,
+      value: 5000,
       valueType: WorkflowIOValueTypeEnum.number
     },
     {
@@ -62,6 +68,14 @@ export const DatasetSearchModule: FlowNodeTemplateType = {
       value: DatasetSearchModeEnum.embedding
     },
     {
+      key: NodeInputKeyEnum.datasetSearchEmbeddingWeight,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.number,
+      value: 0.5
+    },
+    // Rerank
+    {
       key: NodeInputKeyEnum.datasetSearchUsingReRank,
       renderTypeList: [FlowNodeInputTypeEnum.hidden],
       label: '',
@@ -69,14 +83,28 @@ export const DatasetSearchModule: FlowNodeTemplateType = {
       value: false
     },
     {
+      key: NodeInputKeyEnum.datasetSearchRerankModelId,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.string
+    },
+    {
+      key: NodeInputKeyEnum.datasetSearchRerankWeight,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.number,
+      value: 0.5
+    },
+    // Query Extension
+    {
       key: NodeInputKeyEnum.datasetSearchUsingExtensionQuery,
       renderTypeList: [FlowNodeInputTypeEnum.hidden],
       label: '',
       valueType: WorkflowIOValueTypeEnum.boolean,
-      value: true
+      value: false
     },
     {
-      key: NodeInputKeyEnum.datasetSearchExtensionModel,
+      key: NodeInputKeyEnum.datasetSearchExtensionModelId,
       renderTypeList: [FlowNodeInputTypeEnum.hidden],
       label: '',
       valueType: WorkflowIOValueTypeEnum.string
@@ -88,18 +116,29 @@ export const DatasetSearchModule: FlowNodeTemplateType = {
       valueType: WorkflowIOValueTypeEnum.string,
       value: ''
     },
+
     {
-      ...Input_Template_UserChatInput,
-      toolDescription: i18nT('workflow:content_to_search')
+      key: NodeInputKeyEnum.authTmbId,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.boolean,
+      value: false
     },
     {
+      ...Input_Template_UserChatInput,
+      label: i18nT('workflow:search_query'),
+      key: NodeInputKeyEnum.datasetSearchInput,
+      valueType: WorkflowIOValueTypeEnum.arrayString,
+      toolDescription: i18nT('workflow:content_to_search')
+    },
+    Input_Template_Dataset_Tag_Filter_Version,
+    {
       key: NodeInputKeyEnum.collectionFilterMatch,
-      renderTypeList: [FlowNodeInputTypeEnum.JSONEditor, FlowNodeInputTypeEnum.reference],
-      label: i18nT('workflow:collection_metadata_filter'),
-
-      valueType: WorkflowIOValueTypeEnum.object,
+      renderTypeList: [FlowNodeInputTypeEnum.datasetTagFilter, FlowNodeInputTypeEnum.reference],
+      label: i18nT('workflow:tag_filter'),
+      valueType: WorkflowIOValueTypeEnum.string,
       isPro: true,
-      description: i18nT('workflow:filter_description')
+      description: i18nT('workflow:tag_filter_description')
     }
   ],
   outputs: [
@@ -111,6 +150,7 @@ export const DatasetSearchModule: FlowNodeTemplateType = {
       type: FlowNodeOutputTypeEnum.static,
       valueType: WorkflowIOValueTypeEnum.datasetQuote,
       valueDesc: datasetQuoteValueDesc
-    }
+    },
+    Output_Template_Error_Message
   ]
 };

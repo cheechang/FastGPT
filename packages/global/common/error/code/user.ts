@@ -1,28 +1,76 @@
-import { ErrType } from '../errorCode';
-import { i18nT } from '../../../../web/i18n/utils';
+import { type ErrType } from '../errorCode';
+import { i18nT } from '../../i18n/utils';
 /* team: 503000 */
 export enum UserErrEnum {
-  unAuthUser = 'unAuthUser',
+  notUser = 'notUser',
+  userExist = 'userExist',
   unAuthRole = 'unAuthRole',
-  binVisitor = 'binVisitor',
-  balanceNotEnough = 'balanceNotEnough'
+  account_psw_error = 'account_psw_error',
+  unAuthSso = 'unAuthSso',
+  invalidVerificationCode = 'invalidVerificationCode',
+  sendVerificationCodeTooFrequently = 'sendVerificationCodeTooFrequently',
+  verifyCodeTooFrequently = 'verifyCodeTooFrequently',
+  invalidAccount = 'invalidAccount',
+  accountCancellationPending = 'accountCancellationPending',
+  registrationMethodNotSupported = 'registrationMethodNotSupported',
+  passwordChangeAuthorizationInvalid = 'passwordChangeAuthorizationInvalid',
+  newPasswordSameAsOld = 'newPasswordSameAsOld'
 }
 const errList = [
   {
-    statusText: UserErrEnum.unAuthUser,
-    message: i18nT('common:code_error.user_error.un_auth_user')
+    statusText: UserErrEnum.notUser,
+    message: i18nT('common:code_error.account_not_found')
   },
   {
-    statusText: UserErrEnum.binVisitor,
-    message: i18nT('common:code_error.user_error.bin_visitor')
-  }, // 身份校验未通过
+    statusText: UserErrEnum.userExist,
+    message: i18nT('common:code_error.account_exist')
+  },
   {
-    statusText: UserErrEnum.binVisitor,
-    message: i18nT('common:code_error.user_error.bin_visitor_guest')
-  }, // 游客身份
+    statusText: UserErrEnum.account_psw_error,
+    message: i18nT('common:code_error.account_error')
+  },
   {
-    statusText: UserErrEnum.balanceNotEnough,
-    message: i18nT('common:code_error.user_error.balance_not_enough')
+    statusText: UserErrEnum.unAuthSso,
+    message: i18nT('user:sso_auth_failed')
+  },
+  {
+    statusText: UserErrEnum.invalidVerificationCode,
+    message: i18nT('common:error.code_error'),
+    httpStatus: 400
+  },
+  {
+    statusText: UserErrEnum.sendVerificationCodeTooFrequently,
+    message: i18nT('common:error.send_auth_code_too_frequently'),
+    httpStatus: 429
+  },
+  {
+    statusText: UserErrEnum.verifyCodeTooFrequently,
+    message: i18nT('common:error.verify_code_too_frequently'),
+    httpStatus: 429
+  },
+  {
+    statusText: UserErrEnum.invalidAccount,
+    message: i18nT('common:code_error.invalid_account')
+  },
+  {
+    statusText: UserErrEnum.accountCancellationPending,
+    message: i18nT('common:code_error.account_cancellation_pending'),
+    httpStatus: 403
+  },
+  {
+    statusText: UserErrEnum.registrationMethodNotSupported,
+    message: i18nT('common:error.registration_method_not_supported'),
+    httpStatus: 403
+  },
+  {
+    statusText: UserErrEnum.passwordChangeAuthorizationInvalid,
+    message: 'Password change authorization is invalid',
+    httpStatus: 403
+  },
+  {
+    statusText: UserErrEnum.newPasswordSameAsOld,
+    message: i18nT('common:user.Password has no change'),
+    httpStatus: 400
   }
 ];
 export default errList.reduce((acc, cur, index) => {
@@ -32,7 +80,8 @@ export default errList.reduce((acc, cur, index) => {
       code: 503000 + index,
       statusText: cur.statusText,
       message: cur.message,
-      data: null
+      data: null,
+      ...(cur.httpStatus !== undefined ? { httpStatus: cur.httpStatus } : {})
     }
   };
 }, {} as ErrType<`${UserErrEnum}`>);

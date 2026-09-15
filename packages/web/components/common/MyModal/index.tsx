@@ -5,8 +5,9 @@ import {
   ModalContent,
   ModalHeader,
   ModalCloseButton,
-  ModalContentProps,
-  Box
+  type ModalContentProps,
+  Box,
+  type ImageProps
 } from '@chakra-ui/react';
 import MyBox from '../MyBox';
 import { useSystem } from '../../../hooks/useSystem';
@@ -14,7 +15,7 @@ import Avatar from '../Avatar';
 
 export interface MyModalProps extends ModalContentProps {
   iconSrc?: string;
-  iconColor?: string;
+  iconColor?: ImageProps['color'];
   title?: any;
   isCentered?: boolean;
   isLoading?: boolean;
@@ -22,6 +23,7 @@ export interface MyModalProps extends ModalContentProps {
   onClose?: () => void;
   closeOnOverlayClick?: boolean;
   size?: 'md' | 'lg';
+  showCloseButton?: boolean;
 }
 
 const MyModal = ({
@@ -37,6 +39,7 @@ const MyModal = ({
   closeOnOverlayClick = true,
   iconColor,
   size = 'md',
+  showCloseButton = true,
   ...props
 }: MyModalProps) => {
   const { isPc } = useSystem();
@@ -49,9 +52,12 @@ const MyModal = ({
       autoFocus={false}
       isCentered={isPc ? isCentered : true}
       blockScrollOnMount={false}
+      allowPinchZoom
+      scrollBehavior={'inside'}
       closeOnOverlayClick={closeOnOverlayClick}
+      returnFocusOnClose={false}
     >
-      <ModalOverlay />
+      <ModalOverlay zIndex={props.zIndex} />
       <ModalContent
         w={w}
         minW={['90vw', '400px']}
@@ -59,9 +65,12 @@ const MyModal = ({
         position={'relative'}
         maxH={'85vh'}
         boxShadow={'7'}
+        containerProps={{
+          zIndex: props.zIndex
+        }}
         {...props}
       >
-        {!title && onClose && <ModalCloseButton zIndex={1} />}
+        {!title && onClose && showCloseButton && <ModalCloseButton zIndex={1} />}
         {!!title && (
           <ModalHeader
             display={'flex'}
@@ -72,6 +81,7 @@ const MyModal = ({
             py={'10px'}
             fontSize={'md'}
             fontWeight={'bold'}
+            minH={['46px', '53px']}
           >
             {iconSrc && (
               <>
@@ -80,12 +90,12 @@ const MyModal = ({
                   objectFit={'contain'}
                   alt=""
                   src={iconSrc}
-                  w={'1.5rem'}
-                  borderRadius={'md'}
+                  w={'20px'}
+                  borderRadius={'sm'}
                 />
               </>
             )}
-            <Box ml={3} color={'myGray.900'} fontWeight={'500'}>
+            <Box ml={iconSrc ? 3 : 0} color={'myGray.900'} fontWeight={'500'}>
               {title}
             </Box>
             <Box flex={1} />

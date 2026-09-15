@@ -1,7 +1,11 @@
-import { UrlFetchParams, UrlFetchResponse } from '@fastgpt/global/common/file/api';
+import { type UrlFetchParams, type UrlFetchResponse } from '@fastgpt/global/common/file/api';
 import * as cheerio from 'cheerio';
-import axios from 'axios';
+import { axios } from '../api/axios';
 import { htmlToMarkdown } from './utils';
+import { isInternalAddress } from '../system/utils';
+import { getLogger, LogCategories } from '../logger';
+
+const logger = getLogger(LogCategories.HTTP.ERROR);
 
 export const cheerioToHtml = ({
   fetchUrl,
@@ -20,7 +24,7 @@ export const cheerioToHtml = ({
   const selectDom = $(usedSelector);
 
   // remove i element
-  selectDom.find('i,script').remove();
+  selectDom.find('i,script,style').remove();
 
   // remove empty a element
   selectDom
@@ -41,7 +45,7 @@ export const cheerioToHtml = ({
       }
     }
   });
-  selectDom.find('img').each((i, el) => {
+  selectDom.find('img, video, source, audio, iframe').each((i, el) => {
     const src = $(el).attr('src');
     if (src) {
       if (src.startsWith('//')) {
@@ -75,6 +79,16 @@ export const urlsFetch = async ({
 
   const response = await Promise.all(
     urlList.map(async (url) => {
+      const isInternal = await isInternalAddress(url);
+      if (isInternal) {
+        return {
+          url,
+          title: '',
+          content: 'Cannot fetch internal url',
+          selector: ''
+        };
+      }
+
       try {
         const fetchRes = await axios.get(url, {
           timeout: 30000
@@ -96,7 +110,7 @@ export const urlsFetch = async ({
           selector: usedSelector
         };
       } catch (error) {
-        console.log(error, 'fetch error');
+        logger.warn('Failed to fetch url content', { url, error });
 
         return {
           url,

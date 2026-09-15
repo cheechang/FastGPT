@@ -1,14 +1,15 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { LexicalTypeaheadMenuPlugin } from '@lexical/react/LexicalTypeaheadMenuPlugin';
-import { $createTextNode, $getSelection, $isRangeSelection, TextNode } from 'lexical';
+import type { TextNode } from 'lexical';
+import { $createTextNode, $getSelection, $isRangeSelection } from 'lexical';
 import * as React from 'react';
 import { useCallback, useState } from 'react';
 import * as ReactDOM from 'react-dom';
-import { useTranslation } from 'next-i18next';
+import { useSafeTranslation } from '../../../../../../hooks/useSafeTranslation';
 import MyIcon from '../../../../Icon';
 import { Box, Flex } from '@chakra-ui/react';
 import { useBasicTypeaheadTriggerMatch } from '../../utils';
-import { EditorVariablePickerType } from '../../type.d';
+import { type EditorVariablePickerType } from '../../type';
 
 export default function VariablePickerPlugin({
   variables
@@ -17,7 +18,7 @@ export default function VariablePickerPlugin({
 }) {
   const [editor] = useLexicalComposerContext();
   const [queryString, setQueryString] = useState<string | null>(null);
-  const { t } = useTranslation();
+  const { t } = useSafeTranslation();
 
   const checkForTriggerMatch = useBasicTypeaheadTriggerMatch('{', {
     minLength: 0
@@ -34,8 +35,12 @@ export default function VariablePickerPlugin({
           nodeToRemove.remove();
         }
         selection.insertNodes([$createTextNode(`{{${selectedOption.key}}}`)]);
-        closeMenu();
       });
+
+      // Close menu after editor update to avoid flushSync warning
+      setTimeout(() => {
+        closeMenu();
+      }, 0);
     },
     [editor]
   );

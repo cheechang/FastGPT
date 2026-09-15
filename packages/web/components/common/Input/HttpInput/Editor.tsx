@@ -6,7 +6,7 @@
  *
  */
 
-import { useState, useRef, useTransition, useEffect, useMemo } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
@@ -15,18 +15,17 @@ import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { Box, Flex } from '@chakra-ui/react';
 import styles from './index.module.scss';
-import { EditorState, LexicalEditor } from 'lexical';
+import type { EditorState, LexicalEditor } from 'lexical';
 import { getNanoid } from '@fastgpt/global/common/string/tools';
 import {
-  EditorVariableLabelPickerType,
-  EditorVariablePickerType
+  type EditorVariableLabelPickerType,
+  type EditorVariablePickerType
 } from '../../Textarea/PromptEditor/type';
 import { VariableNode } from '../../Textarea/PromptEditor/plugins/VariablePlugin/node';
-import { textToEditorState } from '../../Textarea/PromptEditor/utils';
+import { editorStateToText, textToEditorState } from '../../Textarea/PromptEditor/utils';
 import { SingleLinePlugin } from '../../Textarea/PromptEditor/plugins/SingleLinePlugin';
 import OnBlurPlugin from '../../Textarea/PromptEditor/plugins/OnBlurPlugin';
 import VariablePlugin from '../../Textarea/PromptEditor/plugins/VariablePlugin';
-import VariablePickerPlugin from '../../Textarea/PromptEditor/plugins/VariablePickerPlugin';
 import FocusPlugin from '../../Textarea/PromptEditor/plugins/FocusPlugin';
 import VariableLabelPlugin from '../../Textarea/PromptEditor/plugins/VariableLabelPlugin';
 import { VariableLabelNode } from '../../Textarea/PromptEditor/plugins/VariableLabelPlugin/node';
@@ -39,42 +38,35 @@ export default function Editor({
   onChange,
   onBlur,
   value,
-  currentValue,
   placeholder = '',
-  updateTrigger
+  updateTrigger,
+  tabIndex,
+  resetOnValueChange: _resetOnValueChange = true
 }: {
   h?: number;
   variables: EditorVariablePickerType[];
   variableLabels: EditorVariableLabelPickerType[];
-  onChange?: (editorState: EditorState, editor: LexicalEditor) => void;
+  onChange?: (editor: LexicalEditor) => void;
   onBlur?: (editor: LexicalEditor) => void;
   value?: string;
-  currentValue?: string;
   placeholder?: string;
   updateTrigger?: boolean;
+  tabIndex?: number;
+  resetOnValueChange?: boolean;
 }) {
-  const [key, setKey] = useState(getNanoid(6));
+  const [key, _setKey] = useState(getNanoid(6));
   const [_, startSts] = useTransition();
   const [focus, setFocus] = useState(false);
+  const editorOutputRef = useRef(value);
 
   const initialConfig = {
     namespace: 'HttpInput',
     nodes: [VariableNode, VariableLabelNode],
     editorState: textToEditorState(value),
     onError: (error: Error) => {
-      throw error;
+      console.error('Lexical errror', error);
     }
   };
-
-  useEffect(() => {
-    if (focus) return;
-    setKey(getNanoid(6));
-  }, [value, variables.length]);
-
-  useEffect(() => {
-    setKey(getNanoid(6));
-    setFocus(false);
-  }, [updateTrigger]);
 
   return (
     <Flex
@@ -86,9 +78,11 @@ export default function Editor({
       cursor={'text'}
       overflowY={'visible'}
     >
-      <LexicalComposer initialConfig={initialConfig} key={key}>
+      <LexicalComposer initialConfig={initialConfig} key={`${key}-${updateTrigger ?? ''}`}>
         <PlainTextPlugin
-          contentEditable={<ContentEditable className={styles.contentEditable} />}
+          contentEditable={
+            <ContentEditable className={styles.contentEditable} tabIndex={tabIndex} />
+          }
           placeholder={
             <Box
               position={'absolute'}
@@ -118,9 +112,13 @@ export default function Editor({
         <HistoryPlugin />
         <FocusPlugin focus={focus} setFocus={setFocus} />
         <OnChangePlugin
+          ignoreSelectionChange
           onChange={(editorState: EditorState, editor: LexicalEditor) => {
+            editorOutputRef.current = editorStateToText(editor);
+            if (!onChange) return;
+
             startSts(() => {
-              onChange?.(editorState, editor);
+              onChange(editor);
             });
           }}
         />

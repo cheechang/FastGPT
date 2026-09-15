@@ -1,4 +1,5 @@
-import { i18nT } from '../../../../web/i18n/utils';
+import { i18nT } from '../../../common/i18n/utils';
+import { BillTypeEnum } from '../bill/constants';
 
 export enum SubTypeEnum {
   standard = 'standard',
@@ -8,16 +9,19 @@ export enum SubTypeEnum {
 
 export const subTypeMap = {
   [SubTypeEnum.standard]: {
-    label: 'support.wallet.subscription.type.standard',
-    icon: 'support/account/plans'
+    label: i18nT('common:support.wallet.subscription.type.standard'),
+    icon: 'support/account/plans',
+    orderType: BillTypeEnum.standSubPlan
   },
   [SubTypeEnum.extraDatasetSize]: {
-    label: 'support.wallet.subscription.type.extraDatasetSize',
-    icon: 'core/dataset/datasetLight'
+    label: i18nT('common:support.wallet.subscription.type.extraDatasetSize'),
+    icon: 'core/dataset/datasetLight',
+    orderType: BillTypeEnum.extraDatasetSub
   },
   [SubTypeEnum.extraPoints]: {
-    label: 'support.wallet.subscription.type.extraPoints',
-    icon: 'core/chat/chatLight'
+    label: i18nT('common:support.wallet.subscription.type.extraPoints'),
+    icon: 'core/chat/chatLight',
+    orderType: BillTypeEnum.extraPoints
   }
 };
 
@@ -27,12 +31,12 @@ export enum SubModeEnum {
 }
 export const subModeMap = {
   [SubModeEnum.month]: {
-    label: 'support.wallet.subscription.mode.Month',
+    label: i18nT('common:support.wallet.subscription.mode.Month'),
     durationMonth: 1,
     payMonth: 1
   },
   [SubModeEnum.year]: {
-    label: 'support.wallet.subscription.mode.Year',
+    label: i18nT('common:support.wallet.subscription.mode.Year'),
     durationMonth: 12,
     payMonth: 10
   }
@@ -40,17 +44,52 @@ export const subModeMap = {
 
 export enum StandardSubLevelEnum {
   free = 'free',
+  basic = 'basic',
+  advanced = 'advanced',
+  custom = 'custom',
+
+  /** @deprecated */
   experience = 'experience',
+  /** @deprecated */
   team = 'team',
-  enterprise = 'enterprise',
-  custom = 'custom'
+  /** @deprecated */
+  enterprise = 'enterprise'
 }
+
+/** 各套餐等级的审计日志默认保留天数。 */
+export const defaultAuditLogRetentionDays: Record<StandardSubLevelEnum, number> = {
+  [StandardSubLevelEnum.free]: 90,
+  [StandardSubLevelEnum.basic]: 360,
+  [StandardSubLevelEnum.advanced]: 1080,
+  [StandardSubLevelEnum.custom]: 1080,
+  [StandardSubLevelEnum.experience]: 360,
+  [StandardSubLevelEnum.team]: 1080,
+  [StandardSubLevelEnum.enterprise]: 1080
+};
+
 export const standardSubLevelMap = {
   [StandardSubLevelEnum.free]: {
     label: i18nT('common:support.wallet.subscription.standardSubLevel.free'),
     desc: i18nT('common:support.wallet.subscription.standardSubLevel.free desc'),
     weight: 1
   },
+  [StandardSubLevelEnum.basic]: {
+    label: i18nT('common:support.wallet.subscription.standardSubLevel.basic'),
+    desc: i18nT('common:support.wallet.subscription.standardSubLevel.basic_desc'),
+    weight: 4
+  },
+  [StandardSubLevelEnum.advanced]: {
+    label: i18nT('common:support.wallet.subscription.standardSubLevel.advanced'),
+    desc: i18nT('common:support.wallet.subscription.standardSubLevel.advanced_desc'),
+    weight: 5
+  },
+  [StandardSubLevelEnum.custom]: {
+    label: i18nT('common:support.wallet.subscription.standardSubLevel.custom'),
+    desc: i18nT('common:support.wallet.subscription.standardSubLevel.custom_desc'),
+    weight: 7
+  },
+
+  // deprecated
   [StandardSubLevelEnum.experience]: {
     label: i18nT('common:support.wallet.subscription.standardSubLevel.experience'),
     desc: i18nT('common:support.wallet.subscription.standardSubLevel.experience_desc'),
@@ -64,11 +103,6 @@ export const standardSubLevelMap = {
   [StandardSubLevelEnum.enterprise]: {
     label: i18nT('common:support.wallet.subscription.standardSubLevel.enterprise'),
     desc: i18nT('common:support.wallet.subscription.standardSubLevel.enterprise_desc'),
-    weight: 4
-  },
-  [StandardSubLevelEnum.custom]: {
-    label: i18nT('common:support.wallet.subscription.standardSubLevel.custom'),
-    desc: '',
-    weight: 5
+    weight: 6
   }
 };

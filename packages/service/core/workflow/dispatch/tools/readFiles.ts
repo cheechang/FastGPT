@@ -1,212 +1,116 @@
 import { DispatchNodeResponseKeyEnum } from '@fastgpt/global/core/workflow/runtime/constants';
-import type { ModuleDispatchProps } from '@fastgpt/global/core/workflow/runtime/type';
-import { NodeInputKeyEnum, NodeOutputKeyEnum } from '@fastgpt/global/core/workflow/constants';
-import { DispatchNodeResultType } from '@fastgpt/global/core/workflow/runtime/type';
-import { documentFileType } from '@fastgpt/global/common/file/constants';
-import axios from 'axios';
-import { serverRequestBaseUrl } from '../../../../common/api/serverRequest';
-import { MongoRawTextBuffer } from '../../../../common/buffer/rawText/schema';
-import { readFromSecondary } from '../../../../common/mongo/utils';
-import { getErrText } from '@fastgpt/global/common/error/utils';
-import { detectFileEncoding } from '@fastgpt/global/common/file/tools';
-import { readRawContentByFileBuffer } from '../../../../common/file/read/utils';
+
+import type { NodeInputKeyEnum } from '@fastgpt/global/core/workflow/constants';
+import { NodeOutputKeyEnum } from '@fastgpt/global/core/workflow/constants';
+import type { DispatchNodeResultType, ModuleDispatchProps } from '../../types/runtime';
 import { ChatRoleEnum } from '@fastgpt/global/core/chat/constants';
-import { UserChatItemValueItemType } from '@fastgpt/global/core/chat/type';
+import { type ChatItemMiniType } from '@fastgpt/global/core/chat/type';
+import { getNodeErrResponse } from '../utils';
+import { parseFileContentFromUrls } from '../../../chat/fileContext';
+import { sliceStrStartEnd } from '@fastgpt/global/common/string/tools';
+import { getWorkflowFileContext, getWorkflowFileMaxAmount } from '../../utils/context';
 
 type Props = ModuleDispatchProps<{
   [NodeInputKeyEnum.fileUrlList]: string[];
 }>;
 type Response = DispatchNodeResultType<{
   [NodeOutputKeyEnum.text]: string;
+  [NodeOutputKeyEnum.rawResponse]: {
+    filename: string;
+    url: string;
+    text: string;
+    error?: string;
+  }[];
 }>;
 
-const formatResponseObject = ({
-  filename,
-  url,
-  content
-}: {
-  filename: string;
-  url: string;
-  content: string;
-}) => ({
-  filename,
-  url,
-  text: `File: ${filename}
-<Content>
-${content}
-</Content>`,
-  nodeResponsePreviewText: `File: ${filename}
-<Content>
-${content.slice(0, 100)}${content.length > 100 ? '......' : ''}
-</Content>`
-});
+/**
+ * 格式化 ReadFiles 节点已经读取出的文件正文。
+ *
+ * 这个输出会作为节点 text/toolResponse 传给后续节点，因此只描述“读取结果”，
+ * 不复用对话上传文件 reminder，避免混入“可通过 read_files 再读取”的工具说明。
+ */
+export const buildReadFilesOutputText = (
+  files: { id: string; name: string; content: string }[] = []
+) => {
+  if (files.length === 0) return '';
+
+  return files.map((file) => `## ${file.name}\n${file.content}`).join('\n\n');
+};
 
 export const dispatchReadFiles = async (props: Props): Promise<Response> => {
   const {
-    requestOrigin,
-    runningAppInfo: { teamId },
+    runningUserInfo: { teamId, tmbId },
     histories,
     chatConfig,
-    params: { fileUrlList = [] }
+    node: { version },
+    params: { fileUrlList = [] },
+    usageId
   } = props;
-  const maxFiles = chatConfig?.fileSelectConfig?.maxFiles || 20;
+  const maxFileAmount = getWorkflowFileMaxAmount();
+  const customPdfParse = chatConfig?.fileSelectConfig?.customPdfParse || false;
 
   // Get files from histories
-  const filesFromHistories = histories
+  const filesFromHistories = version !== '489' ? [] : getHistoryFileLinks(histories);
+
+  try {
+    const readFilesResult = await parseFileContentFromUrls({
+      // Concat fileUrlList and filesFromHistories; remove not supported files
+      urls: [...fileUrlList, ...filesFromHistories],
+      maxFiles: maxFileAmount,
+      teamId,
+      tmbId,
+      customPdfParse,
+      usageId,
+      fileContext: getWorkflowFileContext()
+    });
+    const files = readFilesResult.map((item, index) => ({
+      id: `${index}`,
+      name: item.name,
+      content: item.content
+    }));
+
+    const text = buildReadFilesOutputText(files);
+
+    const getPreviewResponse = files
+      .map((item) => `## ${item.name}\n${sliceStrStartEnd(item.content, 1000, 1000)}`)
+      .join('\n\n');
+
+    return {
+      data: {
+        [NodeOutputKeyEnum.text]: text,
+        [NodeOutputKeyEnum.rawResponse]: readFilesResult.map((item) => ({
+          filename: item.name,
+          url: item.url,
+          text: item.success ? item.content : '',
+          ...(item.success ? {} : { error: item.content })
+        }))
+      },
+      [DispatchNodeResponseKeyEnum.nodeResponse]: {
+        readFiles: readFilesResult.map((item) => ({
+          name: item.name,
+          url: item.url
+        })),
+        readFilesResult: getPreviewResponse
+      },
+      [DispatchNodeResponseKeyEnum.toolResponse]: text
+    };
+  } catch (error) {
+    return getNodeErrResponse({ error });
+  }
+};
+
+export const getHistoryFileLinks = (histories: ChatItemMiniType[]) => {
+  return histories
     .filter((item) => {
       if (item.obj === ChatRoleEnum.Human) {
-        return item.value.filter((value) => value.type === 'file');
+        return item.value.some((value) => value.file);
       }
       return false;
     })
-    .map((item) => {
-      const value = item.value as UserChatItemValueItemType[];
-      const files = value
-        .map((item) => {
-          return item.file?.url;
-        })
-        .filter(Boolean) as string[];
-      return files;
-    })
-    .flat();
-
-  // Concat fileUrlList and filesFromHistories; remove not supported files
-  const parseUrlList = [...fileUrlList, ...filesFromHistories]
-    .map((url) => {
-      try {
-        // Avoid "/api/xxx" file error.
-        const origin = requestOrigin ?? 'http://localhost:3000';
-
-        // Check is system upload file
-        if (url.startsWith('/') || (requestOrigin && url.startsWith(requestOrigin))) {
-          // Parse url, get filename query. Keep only documents that can be parsed
-          const parseUrl = new URL(url, origin);
-          const filenameQuery = parseUrl.searchParams.get('filename');
-
-          // Not document
-          if (filenameQuery) {
-            const extensionQuery = filenameQuery.split('.').pop()?.toLowerCase() || '';
-            if (!documentFileType.includes(extensionQuery)) {
-              return '';
-            }
-          }
-
-          //  Remove the origin(Make intranet requests directly)
-          if (requestOrigin && url.startsWith(requestOrigin)) {
-            url = url.replace(requestOrigin, '');
-          }
-        }
-
-        return url;
-      } catch (error) {
-        console.log(error);
-        return '';
+    .flatMap((item) => {
+      if (item.obj === ChatRoleEnum.Human) {
+        return item.value.map((value) => value.file?.url).filter(Boolean) as string[];
       }
-    })
-    .filter(Boolean)
-    .slice(0, maxFiles);
-
-  const readFilesResult = await Promise.all(
-    parseUrlList
-      .map(async (url) => {
-        // Get from buffer
-        const fileBuffer = await MongoRawTextBuffer.findOne({ sourceId: url }, undefined, {
-          ...readFromSecondary
-        }).lean();
-        if (fileBuffer) {
-          return formatResponseObject({
-            filename: fileBuffer.metadata?.filename || url,
-            url,
-            content: fileBuffer.rawText
-          });
-        }
-
-        try {
-          // Get file buffer
-          const response = await axios.get(url, {
-            baseURL: serverRequestBaseUrl,
-            responseType: 'arraybuffer'
-          });
-
-          const buffer = Buffer.from(response.data, 'binary');
-
-          // Get file name
-          const filename = (() => {
-            const contentDisposition = response.headers['content-disposition'];
-            if (contentDisposition) {
-              const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-              const matches = filenameRegex.exec(contentDisposition);
-              if (matches != null && matches[1]) {
-                return decodeURIComponent(matches[1].replace(/['"]/g, ''));
-              }
-            }
-
-            return url;
-          })();
-          // Extension
-          const extension = filename.split('.').pop()?.toLowerCase() || '';
-          // Get encoding
-          const encoding = (() => {
-            const contentType = response.headers['content-type'];
-            if (contentType) {
-              const charsetRegex = /charset=([^;]*)/;
-              const matches = charsetRegex.exec(contentType);
-              if (matches != null && matches[1]) {
-                return matches[1];
-              }
-            }
-
-            return detectFileEncoding(buffer);
-          })();
-
-          // Read file
-          const { rawText } = await readRawContentByFileBuffer({
-            extension,
-            isQAImport: false,
-            teamId,
-            buffer,
-            encoding
-          });
-
-          // Add to buffer
-          try {
-            if (buffer.length < 14 * 1024 * 1024 && rawText.trim()) {
-              MongoRawTextBuffer.create({
-                sourceId: url,
-                rawText,
-                metadata: {
-                  filename: filename
-                }
-              });
-            }
-          } catch (error) {}
-
-          return formatResponseObject({ filename, url, content: rawText });
-        } catch (error) {
-          return formatResponseObject({
-            filename: '',
-            url,
-            content: getErrText(error, 'Load file error')
-          });
-        }
-      })
-      .filter(Boolean)
-  );
-  const text = readFilesResult.map((item) => item?.text ?? '').join('\n******\n');
-
-  return {
-    [NodeOutputKeyEnum.text]: text,
-    [DispatchNodeResponseKeyEnum.nodeResponse]: {
-      readFiles: readFilesResult.map((item) => ({
-        name: item?.filename || '',
-        url: item?.url || ''
-      })),
-      readFilesResult: readFilesResult
-        .map((item) => item?.nodeResponsePreviewText ?? '')
-        .join('\n******\n')
-    },
-    [DispatchNodeResponseKeyEnum.toolResponses]: {
-      fileContent: text
-    }
-  };
+      return [];
+    });
 };

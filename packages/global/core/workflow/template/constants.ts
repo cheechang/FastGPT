@@ -1,39 +1,43 @@
-import { SystemConfigNode } from './system/systemConfig';
-import { PluginConfigNode } from './system/pluginConfig';
-import { EmptyNode } from './system/emptyNode';
-import { WorkflowStart } from './system/workflowStart';
 import { AiChatModule } from './system/aiChat';
-import { DatasetSearchModule } from './system/datasetSearch';
-import { DatasetConcatModule } from './system/datasetConcat';
 import { AssignedAnswerModule } from './system/assignedAnswer';
 import { ClassifyQuestionModule } from './system/classifyQuestion/index';
 import { ContextExtractModule } from './system/contextExtract/index';
+import { DatasetConcatModule } from './system/datasetConcat';
+import { DatasetSearchModule } from './system/datasetSearch';
+import { EmptyNode } from './system/emptyNode';
 import { HttpNode468 } from './system/http468';
+import { WorkflowStart } from './system/workflowStart';
 
-import { ToolModule } from './system/tools';
 import { StopToolNode } from './system/stopTool';
+import { ToolCallNode } from './system/toolCall';
+import { AgentNode } from './system/agent';
 
 import { RunAppModule } from './system/abandoned/runApp/index';
 import { PluginInputModule } from './system/pluginInput';
 import { PluginOutputModule } from './system/pluginOutput';
-import { RunPluginModule } from './system/runPlugin';
+import { AiQueryExtension } from './system/abandoned/queryExtension';
 import { RunAppNode } from './system/runApp';
-import { AiQueryExtension } from './system/queryExtension';
+import { RunPluginModule } from './system/runPlugin';
 
 import type { FlowNodeTemplateType } from '../type/node';
-import { LafModule } from './system/laf';
+import { CustomFeedbackNode } from './system/customFeedback';
 import { IfElseNode } from './system/ifElse/index';
-import { VariableUpdateNode } from './system/variableUpdate';
+import { FormInputNode } from './system/interactive/formInput';
+import { UserSelectNode } from './system/interactive/userSelect';
+import { LoopNode } from './system/abandoned/loop/index';
+import { LoopEndNode } from './system/loop/loopEnd';
+import { LoopStartNode } from './system/loop/loopStart';
+import { LoopRunNode } from './system/loopRun/loopRun';
+import { LoopRunStartNode } from './system/loopRun/loopRunStart';
+import { LoopRunBreakNode } from './system/loopRun/loopRunBreak';
+import { ParallelRunNode } from './system/parallelRun/parallelRun';
+import { ReadFilesNode } from './system/readFiles';
+import { RunToolNode } from './system/runTool';
+import { RunToolSetNode } from './system/runToolSet';
 import { CodeNode } from './system/sandbox';
 import { TextEditorNode } from './system/textEditor';
-import { CustomFeedbackNode } from './system/customFeedback';
-import { ReadFilesNode } from './system/readFiles';
-import { UserSelectNode } from './system/interactive/userSelect';
-import { LoopNode } from './system/loop/loop';
-import { LoopStartNode } from './system/loop/loopStart';
-import { LoopEndNode } from './system/loop/loopEnd';
-import { FormInputNode } from './system/interactive/formInput';
 import { ToolParamsNode } from './system/toolParams';
+import { VariableUpdateNode } from './system/variableUpdate';
 
 const systemNodes: FlowNodeTemplateType[] = [
   AiChatModule,
@@ -43,21 +47,21 @@ const systemNodes: FlowNodeTemplateType[] = [
   ClassifyQuestionModule,
   ContextExtractModule,
   DatasetConcatModule,
-  ToolModule,
+  ToolCallNode,
   ToolParamsNode,
   StopToolNode,
+  AgentNode,
   ReadFilesNode,
   HttpNode468,
-  AiQueryExtension,
-  LafModule,
   IfElseNode,
   VariableUpdateNode,
   CodeNode,
-  LoopNode
+  ParallelRunNode,
+  LoopRunNode,
+  LoopRunBreakNode
 ];
 /* app flow module templates */
 export const appSystemModuleTemplates: FlowNodeTemplateType[] = [
-  SystemConfigNode,
   WorkflowStart,
   ...systemNodes,
   CustomFeedbackNode,
@@ -66,7 +70,6 @@ export const appSystemModuleTemplates: FlowNodeTemplateType[] = [
 ];
 /* plugin flow module templates */
 export const pluginSystemModuleTemplates: FlowNodeTemplateType[] = [
-  PluginConfigNode,
   PluginInputModule,
   PluginOutputModule,
   ...systemNodes
@@ -83,6 +86,11 @@ export const moduleTemplatesFlat: FlowNodeTemplateType[] = [
   RunPluginModule,
   RunAppNode,
   RunAppModule,
+  LoopNode,
   LoopStartNode,
-  LoopEndNode
+  LoopEndNode,
+  LoopRunStartNode,
+  RunToolNode,
+  RunToolSetNode,
+  AiQueryExtension
 ];

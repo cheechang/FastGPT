@@ -7,8 +7,13 @@ import outLinkErr from './code/outLink';
 import teamErr from './code/team';
 import userErr from './code/user';
 import commonErr from './code/common';
+import s3Err from './code/s3';
 import SystemErrEnum from './code/system';
-import { i18nT } from '../../../web/i18n/utils';
+import agentSkillErr from './code/skill';
+import sandboxErr from './code/sandbox';
+import couponErr from './code/coupon';
+import modelErr from './code/model';
+import { i18nT } from '../i18n/utils';
 
 export const ERROR_CODE: { [key: number]: string } = {
   400: i18nT('common:code_error.error_code.400'),
@@ -19,6 +24,7 @@ export const ERROR_CODE: { [key: number]: string } = {
   406: i18nT('common:code_error.error_code.406'),
   410: i18nT('common:code_error.error_code.410'),
   422: i18nT('common:code_error.error_code.422'),
+  429: i18nT('common:code_error.error_code.429'),
   500: i18nT('common:code_error.error_code.500'),
   502: i18nT('common:code_error.error_code.502'),
   503: i18nT('common:code_error.error_code.503'),
@@ -26,7 +32,7 @@ export const ERROR_CODE: { [key: number]: string } = {
 };
 
 export const TOKEN_ERROR_CODE: Record<number, string> = {
-  403: i18nT('common:code_error.token_error_code.403')
+  401: i18nT('common:code_error.token_error_code.401')
 };
 
 export const proxyError: Record<string, boolean> = {
@@ -36,10 +42,14 @@ export const proxyError: Record<string, boolean> = {
 
 export enum ERROR_ENUM {
   unAuthorization = 'unAuthorization',
+  unAuthProToken = 'unAuthProToken',
   insufficientQuota = 'insufficientQuota',
   unAuthModel = 'unAuthModel',
   unAuthApiKey = 'unAuthApiKey',
-  unAuthFile = 'unAuthFile'
+  unAuthFile = 'unAuthFile',
+  tooManyRequest = 'tooManyRequest',
+  /** 对话/知识库等上传：短时请求次数超过套餐或系统频率限制 */
+  uploadFileIntervalLimit = 'uploadFileIntervalLimit'
 }
 
 export type ErrType<T> = Record<
@@ -49,6 +59,7 @@ export type ErrType<T> = Record<
     statusText: T;
     message: string;
     data: null;
+    httpStatus?: number;
   }
 >;
 
@@ -59,12 +70,31 @@ export const ERROR_RESPONSE: Record<
     statusText: string;
     message: string;
     data?: any;
+    httpStatus?: number;
   }
 > = {
   [ERROR_ENUM.unAuthorization]: {
-    code: 403,
+    code: 401,
     statusText: ERROR_ENUM.unAuthorization,
-    message: i18nT('common:code_error.error_message.403'),
+    message: i18nT('common:code_error.error_message.401'),
+    data: null
+  },
+  [ERROR_ENUM.unAuthProToken]: {
+    code: 401,
+    statusText: ERROR_ENUM.unAuthProToken,
+    message: 'PRO_TOKEN check error',
+    data: null
+  },
+  [ERROR_ENUM.tooManyRequest]: {
+    code: 429,
+    statusText: ERROR_ENUM.tooManyRequest,
+    message: i18nT('common:error.too_many_request'),
+    data: null
+  },
+  [ERROR_ENUM.uploadFileIntervalLimit]: {
+    code: 429,
+    statusText: ERROR_ENUM.uploadFileIntervalLimit,
+    message: i18nT('common:error.upload_file_interval_limit'),
     data: null
   },
   [ERROR_ENUM.insufficientQuota]: {
@@ -100,5 +130,10 @@ export const ERROR_RESPONSE: Record<
   ...userErr,
   ...pluginErr,
   ...commonErr,
-  ...SystemErrEnum
+  ...s3Err,
+  ...SystemErrEnum,
+  ...agentSkillErr,
+  ...sandboxErr,
+  ...couponErr,
+  ...modelErr
 };

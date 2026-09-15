@@ -1,21 +1,18 @@
 import { NodeInputKeyEnum } from '@fastgpt/global/core/workflow/constants';
 import { DispatchNodeResponseKeyEnum } from '@fastgpt/global/core/workflow/runtime/constants';
-import {
-  DispatchNodeResultType,
-  ModuleDispatchProps
-} from '@fastgpt/global/core/workflow/runtime/type';
+import type { DispatchNodeResultType, ModuleDispatchProps } from '../../types/runtime';
 
 type Props = ModuleDispatchProps<{
-  [NodeInputKeyEnum.loopEndInput]: any;
+  [NodeInputKeyEnum.nestedEndInput]: any;
 }>;
-type Response = DispatchNodeResultType<{}>;
+type Response = DispatchNodeResultType<Record<string, never>>;
 
 export const dispatchLoopEnd = async (props: Props): Promise<Response> => {
   const { params } = props;
 
   return {
     [DispatchNodeResponseKeyEnum.nodeResponse]: {
-      loopOutputValue: params.loopEndInput
+      loopOutputValue: params[NodeInputKeyEnum.nestedEndInput]
     }
   };
 };

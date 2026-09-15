@@ -1,12 +1,12 @@
 import React from 'react';
-import { EditorState, type LexicalEditor } from 'lexical';
+import type { LexicalEditor } from 'lexical';
 import { useCallback } from 'react';
-import { editorStateToText } from '../../Textarea/PromptEditor/utils';
 import {
-  EditorVariableLabelPickerType,
-  EditorVariablePickerType
+  type EditorVariableLabelPickerType,
+  type EditorVariablePickerType
 } from '../../Textarea/PromptEditor/type';
 import Editor from './Editor';
+import { editorStateToText } from '../../Textarea/PromptEditor/utils';
 
 const HttpInput = ({
   variables = [],
@@ -16,7 +16,9 @@ const HttpInput = ({
   onBlur,
   h,
   placeholder,
-  updateTrigger
+  updateTrigger,
+  tabIndex,
+  resetOnValueChange = true
 }: {
   variables?: EditorVariablePickerType[];
   variableLabels?: EditorVariableLabelPickerType[];
@@ -26,20 +28,19 @@ const HttpInput = ({
   h?: number;
   placeholder?: string;
   updateTrigger?: boolean;
+  tabIndex?: number;
+  resetOnValueChange?: boolean;
 }) => {
-  const [currentValue, setCurrentValue] = React.useState(value);
-
   const onChangeInput = useCallback(
-    (editorState: EditorState, editor: LexicalEditor) => {
-      const text = editorStateToText(editor).replaceAll('}}{{', '}} {{');
-      setCurrentValue(text);
+    (editor: LexicalEditor) => {
+      const text = editorStateToText(editor);
       onChange?.(text);
     },
     [onChange]
   );
   const onBlurInput = useCallback(
     (editor: LexicalEditor) => {
-      const text = editorStateToText(editor).replaceAll('}}{{', '}} {{');
+      const text = editorStateToText(editor);
       onBlur?.(text);
     },
     [onBlur]
@@ -52,11 +53,12 @@ const HttpInput = ({
         variableLabels={variableLabels}
         h={h}
         value={value}
-        currentValue={currentValue}
-        onChange={onChangeInput}
+        onChange={onChange ? onChangeInput : undefined}
         onBlur={onBlurInput}
         placeholder={placeholder}
         updateTrigger={updateTrigger}
+        tabIndex={tabIndex}
+        resetOnValueChange={resetOnValueChange}
       />
     </>
   );

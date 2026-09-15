@@ -1,56 +1,62 @@
-import type { NextApiResponse } from 'next';
 import { NextAPI } from '@/service/middleware/entry';
 import { MongoAppVersion } from '@fastgpt/service/core/app/version/schema';
-import { PaginationProps, PaginationResponse } from '@fastgpt/web/common/fetch/type';
-import { ApiRequestProps } from '@fastgpt/service/type/next';
+import { type ApiRequestProps } from '@fastgpt/next/type';
 import { authApp } from '@fastgpt/service/support/permission/app/auth';
-import { WritePermissionVal } from '@fastgpt/global/support/permission/constant';
-import { VersionListItemType } from '@fastgpt/global/core/app/version';
-
-export type versionListBody = PaginationProps<{
-  appId: string;
-}>;
-
-export type versionListResponse = PaginationResponse<VersionListItemType>;
+import { ReadPermissionVal } from '@fastgpt/global/support/permission/constant';
+import { parsePaginationRequest } from '@fastgpt/service/common/api/pagination';
+import { addSourceMember } from '@fastgpt/service/support/user/utils';
+import { parseApiInput } from '@fastgpt/service/common/zod/requestParseError';
+import { formatTime2YMDHM } from '@fastgpt/global/common/string/time';
+import {
+  AppVersionListBodySchema,
+  AppVersionListResponseSchema,
+  type AppVersionListBodyType,
+  type AppVersionListResponseType
+} from '@fastgpt/global/openapi/core/app/version/api';
 
 async function handler(
-  req: ApiRequestProps<versionListBody>,
-  res: NextApiResponse<any>
-): Promise<versionListResponse> {
-  const { offset, pageSize, appId } = req.body;
+  req: ApiRequestProps<AppVersionListBodyType>
+): Promise<AppVersionListResponseType> {
+  const { appId, isPublish } = parseApiInput({
+    req,
+    bodySchema: AppVersionListBodySchema
+  }).body;
+  const { offset, pageSize } = parsePaginationRequest(req);
 
-  await authApp({ appId, req, per: WritePermissionVal, authToken: true });
+  await authApp({ appId, req, per: ReadPermissionVal, authToken: true });
+
+  const match = {
+    appId,
+    ...(isPublish !== undefined && { isPublish })
+  };
 
   const [result, total] = await Promise.all([
-    MongoAppVersion.find(
-      {
-        appId
-      },
-      '_id appId versionName time isPublish tmbId'
-    )
-      .sort({
-        time: -1
-      })
-      .skip(offset)
-      .limit(pageSize),
-    MongoAppVersion.countDocuments({ appId })
+    (async () => {
+      const versions = await MongoAppVersion.find(match)
+        .sort({
+          time: -1
+        })
+        .skip(offset)
+        .limit(pageSize)
+        .lean();
+
+      return addSourceMember({
+        list: versions
+      }).then((list) =>
+        list.map((item) => ({
+          ...item,
+          isPublish: !!item.isPublish,
+          versionName: item.versionName || formatTime2YMDHM(item.time)
+        }))
+      );
+    })(),
+    MongoAppVersion.countDocuments(match)
   ]);
 
-  const versionList = result.map((item) => {
-    return {
-      _id: item._id,
-      appId: item.appId,
-      versionName: item.versionName,
-      time: item.time,
-      isPublish: item.isPublish,
-      tmbId: item.tmbId
-    };
-  });
-
-  return {
+  return AppVersionListResponseSchema.parse({
     total,
-    list: versionList
-  };
+    list: result
+  });
 }
 
 export default NextAPI(handler);

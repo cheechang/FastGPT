@@ -1,60 +1,61 @@
-import type { ChatCompletionMessageParam } from '@fastgpt/global/core/ai/type.d';
-import { getAIApi } from '../config';
-import { countGptMessagesTokens } from '../../../common/string/tiktoken/index';
-import { loadRequestMessages } from '../../chat/utils';
-import { llmCompletionsBodyFormat } from '../utils';
+import type { ChatCompletionMessageParam } from '@fastgpt/global/core/ai/llm/type';
+import {
+  QuestionGuidePrompt,
+  QuestionGuideFooterPrompt
+} from '@fastgpt/global/core/ai/prompt/agent';
+import json5 from 'json5';
+import { createLLMResponse } from '../llm/request';
+import { getLogger, LogCategories } from '../../../common/logger';
+import type { LLMSystemModelDataType } from '@fastgpt/global/core/ai/model.schema';
 
-export const Prompt_QuestionGuide = `你是一个AI智能助手，你的任务是结合对话记录，推测我下一步的问题。
-你需要生成 3 个可能的问题，引导我继续提问，生成的问题要求：
-1. 生成问题的语言，与最后一个用户提问语言一致。
-2. 问题的长度应小于20个字符。
-3. 按 JSON 格式返回: ["question1", "question2", "question3"]。`;
+const logger = getLogger(LogCategories.MODULE.AI.FUNCTIONS);
 
 export async function createQuestionGuide({
   messages,
-  model
+  model,
+  customPrompt,
+  teamId
 }: {
   messages: ChatCompletionMessageParam[];
-  model: string;
-}) {
+  model: LLMSystemModelDataType;
+  customPrompt?: string;
+  teamId: string;
+}): Promise<{
+  result: string[];
+  inputTokens: number;
+  outputTokens: number;
+}> {
   const concatMessages: ChatCompletionMessageParam[] = [
     ...messages,
     {
       role: 'user',
-      content: Prompt_QuestionGuide
+      content: `${customPrompt || QuestionGuidePrompt}\n${QuestionGuideFooterPrompt}`
     }
   ];
 
-  const ai = getAIApi({
-    timeout: 480000
+  const {
+    answerText: answer,
+    usage: { inputTokens, outputTokens }
+  } = await createLLMResponse({
+    teamId,
+    saveLLMResponseRecord: false,
+    body: {
+      model,
+      messages: concatMessages,
+      stream: true,
+      ...(model.config.reasoning ? { reasoning_effort: 'none' as const } : {})
+    }
   });
-  const data = await ai.chat.completions.create(
-    llmCompletionsBodyFormat(
-      {
-        model,
-        temperature: 0.1,
-        max_tokens: 200,
-        messages: await loadRequestMessages({
-          messages: concatMessages,
-          useVision: false
-        }),
-        stream: false
-      },
-      model
-    )
-  );
-
-  const answer = data.choices?.[0]?.message?.content || '';
 
   const start = answer.indexOf('[');
   const end = answer.lastIndexOf(']');
 
-  const tokens = await countGptMessagesTokens(concatMessages);
-
   if (start === -1 || end === -1) {
+    logger.warn('Question guide response missing JSON array', { answer });
     return {
       result: [],
-      tokens: 0
+      inputTokens,
+      outputTokens
     };
   }
 
@@ -65,13 +66,17 @@ export async function createQuestionGuide({
 
   try {
     return {
-      result: JSON.parse(jsonStr),
-      tokens
+      result: json5.parse(jsonStr),
+      inputTokens,
+      outputTokens
     };
   } catch (error) {
+    logger.warn('Failed to parse question guide JSON', { error, raw: jsonStr });
+
     return {
       result: [],
-      tokens: 0
+      inputTokens,
+      outputTokens
     };
   }
 }

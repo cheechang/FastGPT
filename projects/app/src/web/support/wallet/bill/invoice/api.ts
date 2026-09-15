@@ -1,20 +1,20 @@
-import { PagingData, RequestPaging } from '@/types';
 import { GET, POST } from '@/web/common/api/request';
-import { BillTypeEnum } from '@fastgpt/global/support/wallet/bill/constants';
-import { InvoiceType } from '@fastgpt/global/support/wallet/bill/type';
-import { InvoiceSchemaType } from '../../../../../../../../packages/global/support/wallet/bill/type';
-export type invoiceBillDataType = {
-  type: BillTypeEnum;
-  price: number;
-  createTime: Date;
-  _id: string;
-};
+import type { InvoiceFileInfo } from '@fastgpt/global/support/wallet/bill/invoice/type';
+import type { InvoiceType } from '@fastgpt/global/support/wallet/bill/type';
+import type { InvoiceSchemaType } from '@fastgpt/global/support/wallet/bill/type';
+import type { PaginationProps, PaginationResponse } from '@fastgpt/global/openapi/api';
+import type {
+  UnInvoiceListItemType,
+  UnInvoiceListResponseType
+} from '@fastgpt/global/openapi/support/wallet/bill/invoice/api';
+
+export type invoiceBillDataType = UnInvoiceListItemType;
 
 export const getInvoiceBillsList = () =>
-  GET<invoiceBillDataType[]>(`/proApi/support/wallet/bill/invoice/unInvoiceList`);
+  GET<UnInvoiceListResponseType>(`/proApi/support/wallet/bill/invoice/unInvoiceList`);
 
 export const submitInvoice = (data: InvoiceType) =>
   POST(`/proApi/support/wallet/bill/invoice/submit`, data);
 
-export const getInvoiceRecords = (data: RequestPaging) =>
-  POST<PagingData<InvoiceSchemaType>>(`/proApi/support/wallet/bill/invoice/records`, data);
+export const getInvoiceRecords = (data: PaginationProps) =>
+  POST<PaginationResponse<InvoiceSchemaType>>(`/proApi/support/wallet/bill/invoice/records`, data);

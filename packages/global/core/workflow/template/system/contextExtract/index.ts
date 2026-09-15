@@ -3,7 +3,7 @@ import {
   FlowNodeOutputTypeEnum,
   FlowNodeTypeEnum
 } from '../../../node/constant';
-import { FlowNodeTemplateType } from '../../../type/node';
+import { type FlowNodeTemplateType } from '../../../type/node';
 import {
   WorkflowIOValueTypeEnum,
   NodeInputKeyEnum,
@@ -11,27 +11,27 @@ import {
   FlowNodeTemplateTypeEnum
 } from '../../../constants';
 import { Input_Template_SelectAIModel, Input_Template_History } from '../../input';
-import { LLMModelTypeEnum } from '../../../../ai/constants';
-import { getHandleConfig } from '../../utils';
-import { i18nT } from '../../../../../../web/i18n/utils';
+import { i18nT } from '../../../../../common/i18n/utils';
+import { Output_Template_Error_Message } from '../../output';
 
 export const ContextExtractModule: FlowNodeTemplateType = {
   id: FlowNodeTypeEnum.contentExtract,
   templateType: FlowNodeTemplateTypeEnum.ai,
   flowNodeType: FlowNodeTypeEnum.contentExtract,
-  sourceHandle: getHandleConfig(true, true, true, true),
-  targetHandle: getHandleConfig(true, true, true, true),
+  showSourceHandle: true,
+  showTargetHandle: true,
   avatar: 'core/workflow/template/extractJson',
+  avatarLinear: 'core/workflow/template/extractJsonLinear',
+  colorSchema: 'teal',
   name: i18nT('workflow:text_content_extraction'),
   intro: i18nT('workflow:intro_text_content_extraction'),
   showStatus: true,
   isTool: true,
-  version: '481',
+  catchError: false,
+  courseUrl: '/guide/build/workflow/nodes/content_extract',
+  version: '4.9.2',
   inputs: [
-    {
-      ...Input_Template_SelectAIModel,
-      llmModelType: LLMModelTypeEnum.extractFields
-    },
+    Input_Template_SelectAIModel,
     {
       key: NodeInputKeyEnum.description,
       renderTypeList: [FlowNodeInputTypeEnum.textarea, FlowNodeInputTypeEnum.reference],
@@ -47,7 +47,8 @@ export const ContextExtractModule: FlowNodeTemplateType = {
       label: i18nT('workflow:text_to_extract'),
       required: true,
       valueType: WorkflowIOValueTypeEnum.string,
-      toolDescription: i18nT('workflow:content_to_retrieve')
+      toolDescription: i18nT('workflow:content_to_retrieve'),
+      defaultToAgentGenerated: true
     },
     {
       key: NodeInputKeyEnum.extractKeys,
@@ -76,6 +77,7 @@ export const ContextExtractModule: FlowNodeTemplateType = {
       description: i18nT('workflow:complete_extraction_result_description'),
       valueType: WorkflowIOValueTypeEnum.string,
       type: FlowNodeOutputTypeEnum.static
-    }
+    },
+    Output_Template_Error_Message
   ]
 };

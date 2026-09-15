@@ -1,43 +1,46 @@
-import React, { useMemo } from 'react';
-import { FieldArrayWithId } from 'react-hook-form';
-import { ChatBoxInputFormType } from '../ChatBox/type';
-import { Box, CircularProgress, Flex, HStack, Image } from '@chakra-ui/react';
+import React from 'react';
+import { type FieldArrayWithId } from 'react-hook-form';
+import { type ChatBoxInputFormType } from '../ChatBox/type';
+import { Box, CircularProgress, Flex, HStack, type FlexProps } from '@chakra-ui/react';
 import MyBox from '@fastgpt/web/components/common/MyBox';
 import MyIcon from '@fastgpt/web/components/common/Icon';
 import { ChatFileTypeEnum } from '@fastgpt/global/core/chat/constants';
 import { useSystem } from '@fastgpt/web/hooks/useSystem';
+import MyImage from '@fastgpt/web/components/common/Image/MyImage';
+import { getFileIcon } from '@fastgpt/global/common/file/icon';
+import { getFileUploadId } from '../ChatBox/utils/uploadTask';
 
 const RenderFilePreview = ({
   fileList,
-  removeFiles
+  onRemoveFile,
+  pt = [2, 3]
 }: {
   fileList: FieldArrayWithId<ChatBoxInputFormType, 'files', 'id'>[];
-  removeFiles?: (index?: number | number[]) => void;
+  onRemoveFile?: (file: FieldArrayWithId<ChatBoxInputFormType, 'files', 'id'>) => void;
+  pt?: FlexProps['pt'];
 }) => {
   const { isPc } = useSystem();
 
   return fileList.length > 0 ? (
     <Flex
-      maxH={'250px'}
-      overflowY={'auto'}
+      overflow={'visible'}
       wrap={'wrap'}
-      pt={3}
+      pt={pt}
       userSelect={'none'}
       mb={fileList.length > 0 ? 2 : 0}
-      pr={0.5}
+      gap={'6px'}
     >
-      {fileList.map((item, index) => {
-        const isFile = item.type === ChatFileTypeEnum.file;
+      {fileList.map((item) => {
         const isImage = item.type === ChatFileTypeEnum.image;
+        const isFile = !isImage;
+        const icon = getFileIcon(item.name);
+
         return (
           <MyBox
-            key={index}
+            key={getFileUploadId(item)}
             maxW={isFile ? 56 : 14}
-            w={isFile ? '50%' : '12.5%'}
+            w={isFile ? 'calc(50% - 3px)' : '12.5%'}
             aspectRatio={isFile ? 4 : 1}
-            pr={1.5}
-            pb={1.5}
-            mb={0.5}
           >
             <Box
               border={'sm'}
@@ -54,7 +57,7 @@ const RenderFilePreview = ({
               alignItems={'center'}
               pl={isFile ? 1 : 0}
             >
-              {removeFiles && (
+              {onRemoveFile && (
                 <MyIcon
                   name={'closeSolid'}
                   w={'16px'}
@@ -67,16 +70,16 @@ const RenderFilePreview = ({
                   bg={'white'}
                   right={'-8px'}
                   top={'-8px'}
-                  onClick={() => removeFiles(index)}
+                  onClick={() => onRemoveFile(item)}
                   className="close-icon"
                   display={['', 'none']}
                   zIndex={10}
                 />
               )}
               {isImage && (
-                <Image
+                <MyImage
                   alt={'img'}
-                  src={item.icon}
+                  src={item.icon || item.url}
                   w={'full'}
                   h={'full'}
                   borderRadius={'md'}
@@ -85,7 +88,7 @@ const RenderFilePreview = ({
               )}
               {isFile && (
                 <HStack alignItems={'center'} h={'full'}>
-                  <MyIcon name={item.icon as any} w={['1.5rem', '2rem']} h={['1.5rem', '2rem']} />
+                  <MyIcon name={icon as any} w={['1.5rem', '2rem']} h={['1.5rem', '2rem']} />
                   <Box flex={'1 0 0'} pr={2} className="textEllipsis" fontSize={'xs'}>
                     {item.name}
                   </Box>

@@ -1,34 +1,53 @@
-import { FlowNodeInputTypeEnum, FlowNodeTypeEnum } from '../../../node/constant';
-import { FlowNodeTemplateType } from '../../../type/node.d';
+import {
+  FlowNodeInputTypeEnum,
+  FlowNodeOutputTypeEnum,
+  FlowNodeTypeEnum
+} from '../../../node/constant';
+import { type FlowNodeTemplateType } from '../../../type/node';
 import {
   FlowNodeTemplateTypeEnum,
   NodeInputKeyEnum,
+  NodeOutputKeyEnum,
   WorkflowIOValueTypeEnum
 } from '../../../constants';
-import { getHandleConfig } from '../../utils';
-import { i18nT } from '../../../../../../web/i18n/utils';
+import { i18nT } from '../../../../../common/i18n/utils';
 
 export const LoopStartNode: FlowNodeTemplateType = {
-  id: FlowNodeTypeEnum.loopStart,
+  id: FlowNodeTypeEnum.nestedStart,
   templateType: FlowNodeTemplateTypeEnum.systemInput,
-  flowNodeType: FlowNodeTypeEnum.loopStart,
-  sourceHandle: getHandleConfig(false, true, false, false),
-  targetHandle: getHandleConfig(false, false, false, false),
+  flowNodeType: FlowNodeTypeEnum.nestedStart,
+  showSourceHandle: true,
+  showTargetHandle: false,
   avatar: 'core/workflow/template/loopStart',
+  avatarLinear: 'core/workflow/template/loopStartLinear',
+  colorSchema: 'violetDeep',
   name: i18nT('workflow:loop_start'),
   unique: true,
   forbidDelete: true,
   showStatus: false,
-  version: '4811',
   inputs: [
     {
-      key: NodeInputKeyEnum.loopStartInput,
+      key: NodeInputKeyEnum.nestedStartInput,
       renderTypeList: [FlowNodeInputTypeEnum.hidden],
       valueType: WorkflowIOValueTypeEnum.any,
       label: '',
       required: true,
       value: ''
+    },
+    {
+      key: NodeInputKeyEnum.nestedStartIndex,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      valueType: WorkflowIOValueTypeEnum.number,
+      label: i18nT('workflow:Array_element_index')
     }
   ],
-  outputs: []
+  outputs: [
+    {
+      id: NodeOutputKeyEnum.nestedStartIndex,
+      key: NodeOutputKeyEnum.nestedStartIndex,
+      label: i18nT('workflow:Array_element_index'),
+      type: FlowNodeOutputTypeEnum.static,
+      valueType: WorkflowIOValueTypeEnum.number
+    }
+  ]
 };

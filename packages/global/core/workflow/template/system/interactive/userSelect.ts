@@ -1,4 +1,4 @@
-import { i18nT } from '../../../../../../web/i18n/utils';
+import { i18nT } from '../../../../../common/i18n/utils';
 import {
   FlowNodeTemplateTypeEnum,
   NodeInputKeyEnum,
@@ -10,21 +10,24 @@ import {
   FlowNodeOutputTypeEnum,
   FlowNodeTypeEnum
 } from '../../../node/constant';
-import { FlowNodeTemplateType } from '../../../type/node.d';
-import { getHandleConfig } from '../../utils';
+import { createHideInContext } from '../../context';
+import { type FlowNodeTemplateType } from '../../../type/node';
 
 export const UserSelectNode: FlowNodeTemplateType = {
   id: FlowNodeTypeEnum.userSelect,
   templateType: FlowNodeTemplateTypeEnum.interactive,
   flowNodeType: FlowNodeTypeEnum.userSelect,
-  sourceHandle: getHandleConfig(false, false, false, false),
-  targetHandle: getHandleConfig(true, false, true, true),
+  showSourceHandle: false,
+  showTargetHandle: true,
   avatar: 'core/workflow/template/userSelect',
+  avatarLinear: 'core/workflow/template/userSelectLinear',
+  colorSchema: 'green',
   diagram: '/imgs/app/userSelect.svg',
   name: i18nT('app:workflow.user_select'),
   intro: i18nT(`app:workflow.user_select_tip`),
-  showStatus: true,
-  version: '489',
+  isTool: true,
+  isShowInContext: createHideInContext([{ parentType: FlowNodeTypeEnum.parallelRun }]),
+  courseUrl: '/guide/build/workflow/nodes/user-selection',
   inputs: [
     {
       key: NodeInputKeyEnum.description,

@@ -1,4 +1,4 @@
-import { i18nT } from '../../../../../../web/i18n/utils';
+import { i18nT } from '../../../../../common/i18n/utils';
 import {
   FlowNodeTemplateTypeEnum,
   NodeInputKeyEnum,
@@ -10,25 +10,28 @@ import {
   FlowNodeOutputTypeEnum,
   FlowNodeTypeEnum
 } from '../../../node/constant';
-import { FlowNodeTemplateType } from '../../../type/node';
-import { getHandleConfig } from '../../utils';
+import { type FlowNodeTemplateType } from '../../../type/node';
 
 export const IfElseNode: FlowNodeTemplateType = {
   id: FlowNodeTypeEnum.ifElseNode,
   templateType: FlowNodeTemplateTypeEnum.tools,
   flowNodeType: FlowNodeTypeEnum.ifElseNode,
-  sourceHandle: getHandleConfig(false, false, false, false),
-  targetHandle: getHandleConfig(true, false, true, true),
+  showSourceHandle: false,
+  showTargetHandle: true,
   avatar: 'core/workflow/template/ifelse',
+  avatarLinear: 'core/workflow/template/ifelseLinear',
+  colorSchema: 'greenLight',
   name: i18nT('workflow:condition_checker'),
   intro: i18nT('workflow:execute_different_branches_based_on_conditions'),
   showStatus: true,
-  version: '481',
+  isTool: true,
+  courseUrl: '/guide/build/workflow/nodes/tfswitch',
   inputs: [
     {
       key: NodeInputKeyEnum.ifElseList,
       renderTypeList: [FlowNodeInputTypeEnum.hidden],
       valueType: WorkflowIOValueTypeEnum.any,
+      canAgentGenerated: false,
       label: '',
       value: [
         {
@@ -37,7 +40,8 @@ export const IfElseNode: FlowNodeTemplateType = {
             {
               variable: undefined,
               condition: undefined,
-              value: undefined
+              value: undefined,
+              valueType: 'input'
             }
           ]
         }

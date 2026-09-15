@@ -1,11 +1,27 @@
 export enum TimerIdEnum {
-  checkInValidDatasetFiles = 'checkInValidDatasetFiles',
+  checkExpiredFiles = 'checkExpiredFiles',
   checkInvalidDatasetData = 'checkInvalidDatasetData',
   checkInvalidVector = 'checkInvalidVector',
   clearExpiredSubPlan = 'clearExpiredSubPlan',
   updateStandardPlan = 'updateStandardPlan',
   scheduleTriggerApp = 'scheduleTriggerApp',
-  notification = 'notification'
+  notification = 'notification',
+
+  clearExpiredRawTextBuffer = 'clearExpiredRawTextBuffer',
+  clearExpiredDatasetImage = 'clearExpiredDatasetImage',
+  clearExpiredMinioFiles = 'clearExpiredMinioFiles',
+  recordTeamQPM = 'recordTeamQPM',
+  auditLogCleanup = 'auditLogCleanup',
+  chatHistoryCleanup = 'chatHistoryCleanup',
+  datasetSyncSchedulerReconcile = 'datasetSyncSchedulerReconcile',
+  stopInactiveSandboxes = 'stopInactiveSandboxes',
+  archiveInactiveSandboxes = 'archiveInactiveSandboxes',
+  recoverStaleSandboxOperations = 'recoverStaleSandboxOperations',
+  enterpriseAuthTaskCleanup = 'enterpriseAuthTaskCleanup',
+  accountCancellationReminder = 'accountCancellationReminder',
+  accountCancellationFinalize = 'accountCancellationFinalize',
+  /** 纠正长时间卡在 generating 的会话状态 */
+  cleanStaleGeneratingChat = 'cleanStaleGeneratingChat'
 }
 
 export enum LockNotificationEnum {

@@ -1,4 +1,4 @@
-import { i18nT } from '../../../../../../web/i18n/utils';
+import { i18nT } from '../../../../../common/i18n/utils';
 
 export enum VariableConditionEnum {
   equalTo = 'equalTo',
@@ -113,3 +113,15 @@ export const allConditionList = [
     value: VariableConditionEnum.lengthLessThanOrEqualTo
   }
 ];
+export const renderNumberConditionList = new Set<VariableConditionEnum>([
+  VariableConditionEnum.greaterThan,
+  VariableConditionEnum.greaterThanOrEqualTo,
+  VariableConditionEnum.lessThan,
+  VariableConditionEnum.lessThanOrEqualTo,
+  VariableConditionEnum.lengthEqualTo,
+  VariableConditionEnum.lengthNotEqualTo,
+  VariableConditionEnum.lengthGreaterThan,
+  VariableConditionEnum.lengthGreaterThanOrEqualTo,
+  VariableConditionEnum.lengthLessThan,
+  VariableConditionEnum.lengthLessThanOrEqualTo
+]);

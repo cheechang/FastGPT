@@ -1,97 +1,92 @@
+'use client';
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Box,
-  Flex,
-  Image,
-  Button,
-  useDisclosure,
-  InputGroup,
-  InputLeftElement,
-  Input
-} from '@chakra-ui/react';
+import { Box, Flex, Button, InputGroup, InputLeftElement, Input } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
-import { serviceSideProps } from '@/web/common/utils/i18n';
-import ParentPaths from '@/components/common/folder/Path';
-import List from './component/List';
-import { DatasetsContext } from './context';
-import DatasetContextProvider from './context';
+import { serviceSideProps } from '@/web/common/i18n/utils';
+import FolderPath from '@/components/common/folder/Path';
+import List from '@/pageComponents/dataset/list/List';
+import { DatasetsContext } from '../../../pageComponents/dataset/list/context';
+import DatasetContextProvider from '../../../pageComponents/dataset/list/context';
 import { useContextSelector } from 'use-context-selector';
-import MyMenu from '@fastgpt/web/components/common/MyMenu';
+import MultipleMenu from '@fastgpt/web/components/common/MyMenu/Multiple';
 import { AddIcon } from '@chakra-ui/icons';
 import { useUserStore } from '@/web/support/user/useUserStore';
 import MyIcon from '@fastgpt/web/components/common/Icon';
 import { FolderIcon } from '@fastgpt/global/common/file/image/constants';
-import { EditFolderFormType } from '@fastgpt/web/components/common/MyModal/EditFolderModal';
+import { type EditFolderFormType } from '@fastgpt/web/components/common/MyModal/EditFolderModal';
 import dynamic from 'next/dynamic';
 import { postCreateDatasetFolder, resumeInheritPer } from '@/web/core/dataset/api';
 import FolderSlideCard from '@/components/common/folder/SlideCard';
-import {
-  DatasetDefaultPermissionVal,
-  DatasetPermissionList
-} from '@fastgpt/global/support/permission/dataset/constant';
+import { DatasetRoleList } from '@fastgpt/global/support/permission/dataset/constant';
 import {
   postUpdateDatasetCollaborators,
-  deleteDatasetCollaborators,
   getCollaboratorList
 } from '@/web/core/dataset/api/collaborator';
 import { useSystem } from '@fastgpt/web/hooks/useSystem';
-import { CreateDatasetType } from './component/CreateModal';
+import { type CreateDatasetType } from '@/pageComponents/dataset/list/CreateModal';
+import { resolveDatasetCreateAction } from '@/pageComponents/dataset/list/commercialDatasetTypes';
 import { DatasetTypeEnum } from '@fastgpt/global/core/dataset/constants';
-import { useToast } from '@fastgpt/web/hooks/useToast';
 import MyBox from '@fastgpt/web/components/common/MyBox';
+import { useSystemStore } from '@/web/common/system/useSystemStore';
+import {
+  canCreateSubFolder,
+  DEFAULT_MAX_FOLDER_DEPTH,
+  normalizeParentId
+} from '@fastgpt/global/common/parentFolder/depth';
+import { ReadRoleVal } from '@fastgpt/global/support/permission/constant';
+import ProModal from '@/components/ProTip/ProModal';
+import DatasetListFilters from '@/pageComponents/dataset/list/ListFilters';
 
 const EditFolderModal = dynamic(
   () => import('@fastgpt/web/components/common/MyModal/EditFolderModal')
 );
 
-const CreateModal = dynamic(() => import('./component/CreateModal'));
+const CreateModal = dynamic(() => import('@/pageComponents/dataset/list/CreateModal'));
 
 const Dataset = () => {
   const { isPc } = useSystem();
   const { t } = useTranslation();
   const router = useRouter();
-  const { parentId } = router.query as { parentId: string };
+  const parentId = normalizeParentId(router.query.parentId);
 
   const {
-    myDatasets,
     paths,
-    isFetchingDatasets,
     refetchPaths,
     loadMyDatasets,
     refetchFolderDetail,
     folderDetail,
-    setEditedDataset,
     setMoveDatasetId,
     onDelDataset,
     onUpdateDataset,
     searchKey,
-    setSearchKey
+    setSearchKey,
+    listFilters,
+    setListFilters
   } = useContextSelector(DatasetsContext, (v) => v);
   const { userInfo } = useUserStore();
-  const { toast } = useToast();
+  const { feConfigs } = useSystemStore();
+  const maxFolderDepth = feConfigs?.limit?.maxFolderDepth ?? DEFAULT_MAX_FOLDER_DEPTH;
+  const canCreateFolder = canCreateSubFolder(parentId, paths, maxFolderDepth);
+
   const [editFolderData, setEditFolderData] = useState<EditFolderFormType>();
   const [createDatasetType, setCreateDatasetType] = useState<CreateDatasetType>();
+  const [proModalOpen, setProModalOpen] = useState(false);
 
   const onSelectDatasetType = useCallback(
-    (e: CreateDatasetType) => {
-      if (
-        !feConfigs?.isPlus &&
-        (e === DatasetTypeEnum.websiteDataset || e === DatasetTypeEnum.externalFile)
-      ) {
-        return toast({
-          status: 'warning',
-          title: t('common:common.system.Commercial version function')
-        });
+    (type: CreateDatasetType) => {
+      if (resolveDatasetCreateAction(type, feConfigs?.isPlus) === 'proModal') {
+        setProModalOpen(true);
+        return;
       }
-      setCreateDatasetType(e);
+      setCreateDatasetType(type);
     },
-    [t, toast]
+    [feConfigs?.isPlus]
   );
 
   const RenderSearchInput = useMemo(
     () => (
-      <InputGroup maxW={['auto', '250px']} pr={[0, 4]}>
+      <InputGroup maxW={['auto', '250px']}>
         <InputLeftElement h={'full'} alignItems={'center'} display={'flex'}>
           <MyIcon color={'myGray.600'} name={'common/searchLight'} w={'1rem'} />
         </InputLeftElement>
@@ -109,104 +104,160 @@ const Dataset = () => {
     ),
     [searchKey, setSearchKey, t]
   );
+
   return (
-    <MyBox
-      isLoading={myDatasets.length === 0 && isFetchingDatasets}
-      flexDirection={'column'}
-      h={'100%'}
-      overflowY={'auto'}
-      overflowX={'hidden'}
-    >
-      <Flex pt={[4, 6]} pl={3} pr={[3, 10]}>
-        <Flex flexGrow={1} flexDirection="column">
-          <Flex alignItems={'flex-start'} justifyContent={'space-between'}>
-            <ParentPaths
-              paths={paths}
-              FirstPathDom={
-                <Flex flex={1} alignItems={'center'}>
-                  <Box
-                    pl={2}
-                    letterSpacing={1}
-                    fontSize={'1.25rem'}
-                    fontWeight={'bold'}
-                    color={'myGray.900'}
-                  >
-                    {t('common:core.dataset.My Dataset')}
-                  </Box>
-                </Flex>
-              }
-              onClick={(e) => {
-                router.push({
-                  query: {
-                    parentId: e
-                  }
-                });
-              }}
-            />
-
-            {isPc && RenderSearchInput}
-
-            {userInfo?.team?.permission.hasWritePer && (
-              <MyMenu
-                offset={[0, 10]}
-                width={120}
-                iconSize="2rem"
-                iconRadius="6px"
-                placement="bottom-end"
-                Button={
-                  <Button variant={'primary'} px="0">
-                    <Flex alignItems={'center'} px={5}>
-                      <AddIcon mr={2} />
-                      <Box>{t('common:common.Create New')}</Box>
-                    </Flex>
-                  </Button>
+    <Flex flexDirection={'column'} h={'100%'}>
+      <Flex gap={5} flex={'1 0 0'} h={0}>
+        <Flex
+          flex={'1 0 0'}
+          flexDirection={'column'}
+          h={'100%'}
+          pr={folderDetail ? [3, 2] : [3, 6]}
+          pl={6}
+          pt={6}
+          overflowY={'hidden'}
+          overflowX={'hidden'}
+        >
+          <Flex alignItems={'center'} gap={3} minW={0} flexWrap={'wrap'} flexShrink={0}>
+            <Box flexShrink={0}>
+              <FolderPath
+                paths={paths}
+                FirstPathDom={
+                  <Flex alignItems={'center'}>
+                    <Box
+                      pl={2}
+                      letterSpacing={1}
+                      fontSize={'1.25rem'}
+                      fontWeight={'bold'}
+                      color={'myGray.900'}
+                    >
+                      {t('common:core.dataset.My Dataset')}
+                    </Box>
+                  </Flex>
                 }
-                menuList={[
-                  {
-                    children: [
-                      {
-                        icon: 'core/dataset/commonDatasetColor',
-                        label: t('dataset:common_dataset'),
-                        description: t('dataset:common_dataset_desc'),
-                        onClick: () => setCreateDatasetType(DatasetTypeEnum.dataset)
-                      },
-                      {
-                        icon: 'core/dataset/websiteDatasetColor',
-                        label: t('dataset:website_dataset'),
-                        description: t('dataset:website_dataset_desc'),
-                        onClick: () => setCreateDatasetType(DatasetTypeEnum.websiteDataset)
-                      },
-                      {
-                        icon: 'core/dataset/externalDatasetColor',
-                        label: t('dataset:external_file'),
-                        description: t('dataset:external_file_dataset_desc'),
-                        onClick: () => setCreateDatasetType(DatasetTypeEnum.externalFile)
-                      }
-                    ]
-                  },
-                  {
-                    children: [
-                      {
-                        icon: FolderIcon,
-                        label: t('common:Folder'),
-                        onClick: () => setEditFolderData({})
-                      }
-                    ]
-                  }
-                ]}
+                onClick={(e) => {
+                  router.push({
+                    query: {
+                      parentId: e
+                    }
+                  });
+                }}
               />
+            </Box>
+
+            {isPc && (
+              <>
+                <Box flexShrink={0}>{RenderSearchInput}</Box>
+                <DatasetListFilters value={listFilters} onChange={setListFilters} />
+              </>
+            )}
+
+            <Flex flex={1} />
+
+            {(folderDetail
+              ? folderDetail.permission.hasWritePer
+              : userInfo?.team?.permission.hasDatasetCreatePer) && (
+              <Box pl={[0, 4]}>
+                <MultipleMenu
+                  size="md"
+                  Trigger={
+                    <Button variant={'primary'} px="0">
+                      <Flex alignItems={'center'} px={5}>
+                        <AddIcon mr={2} />
+                        <Box>{t('common:new_create')}</Box>
+                      </Flex>
+                    </Button>
+                  }
+                  menuList={[
+                    {
+                      children: [
+                        {
+                          icon: 'core/dataset/commonDatasetColor',
+                          label: t('dataset:common_dataset'),
+                          description: t('dataset:common_dataset_desc'),
+                          onClick: () => onSelectDatasetType(DatasetTypeEnum.dataset)
+                        },
+                        {
+                          icon: 'core/dataset/websiteDatasetColor',
+                          label: t('dataset:website_dataset'),
+                          description: t('dataset:website_dataset_desc'),
+                          onClick: () => onSelectDatasetType(DatasetTypeEnum.websiteDataset)
+                        },
+                        {
+                          icon: 'core/dataset/otherDataset',
+                          label: t('dataset:other_dataset'),
+                          description: t('dataset:external_other_dataset_desc'),
+                          menuList: [
+                            {
+                              children: [
+                                {
+                                  icon: 'core/dataset/externalDatasetColor',
+                                  label: t('dataset:api_file'),
+                                  description: t('dataset:external_file_dataset_desc'),
+                                  onClick: () => onSelectDatasetType(DatasetTypeEnum.apiDataset)
+                                },
+                                ...(feConfigs?.show_dataset_feishu !== false
+                                  ? [
+                                      {
+                                        icon: 'core/dataset/feishuDatasetColor',
+                                        label: t('dataset:feishu_dataset'),
+                                        description: t('dataset:feishu_dataset_desc'),
+                                        onClick: () => onSelectDatasetType(DatasetTypeEnum.feishu)
+                                      }
+                                    ]
+                                  : []),
+                                ...(feConfigs?.show_dataset_yuque !== false
+                                  ? [
+                                      {
+                                        icon: 'core/dataset/yuqueDatasetColor',
+                                        label: t('dataset:yuque_dataset'),
+                                        description: t('dataset:yuque_dataset_desc'),
+                                        onClick: () => onSelectDatasetType(DatasetTypeEnum.yuque)
+                                      }
+                                    ]
+                                  : []),
+                                ...(feConfigs?.show_dataset_dingtalk !== false
+                                  ? [
+                                      {
+                                        icon: 'core/dataset/dingtalkDatasetColor',
+                                        label: t('dataset:dingtalk_dataset'),
+                                        description: t('dataset:dingtalk_dataset_desc'),
+                                        onClick: () => onSelectDatasetType(DatasetTypeEnum.dingtalk)
+                                      }
+                                    ]
+                                  : [])
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      children: [
+                        {
+                          icon: FolderIcon,
+                          label: t('common:Folder'),
+                          disabled: !canCreateFolder,
+                          disabledTip: t('common:folder_depth_limit_tip'),
+                          onClick: () => setEditFolderData({})
+                        }
+                      ]
+                    }
+                  ]}
+                />
+              </Box>
             )}
           </Flex>
 
           {!isPc && <Box mt={2}>{RenderSearchInput}</Box>}
 
-          <Box flexGrow={1}>
+          <MyBox flex={'1 0 0'} minH={0}>
             <List />
-          </Box>
+          </MyBox>
         </Flex>
 
         {!!folderDetail && isPc && (
-          <Box ml="6">
+          <Box pt={[4, 6]} pr={[4, 6]} h={'100%'} pb={4} overflow={'auto'}>
             <FolderSlideCard
               resumeInheritPermission={() => resumeInheritPer(folderDetail._id)}
               isInheritPermission={folderDetail.inheritPermission}
@@ -234,37 +285,15 @@ const Dataset = () => {
                   });
                 })
               }
-              defaultPer={{
-                value: folderDetail.defaultPermission,
-                defaultValue: DatasetDefaultPermissionVal,
-                onChange: (e) => {
-                  return onUpdateDataset({
-                    id: folderDetail._id,
-                    defaultPermission: e
-                  });
-                }
-              }}
               managePer={{
+                defaultRole: ReadRoleVal,
                 permission: folderDetail.permission,
                 onGetCollaboratorList: () => getCollaboratorList(folderDetail._id),
-                permissionList: DatasetPermissionList,
-                onUpdateCollaborators: ({
-                  tmbIds,
-                  permission
-                }: {
-                  tmbIds: string[];
-                  permission: number;
-                }) => {
-                  return postUpdateDatasetCollaborators({
-                    tmbIds,
-                    permission,
+                roleList: DatasetRoleList,
+                onUpdateCollaborators: (params) =>
+                  postUpdateDatasetCollaborators({
+                    ...params,
                     datasetId: folderDetail._id
-                  });
-                },
-                onDelOneCollaborator: (tmbId: string) =>
-                  deleteDatasetCollaborators({
-                    datasetId: folderDetail._id,
-                    tmbId
                   }),
                 refreshDeps: [folderDetail._id, folderDetail.inheritPermission]
               }}
@@ -284,8 +313,7 @@ const Dataset = () => {
                 name,
                 intro: intro ?? ''
               });
-              loadMyDatasets();
-              refetchPaths();
+              await Promise.all([loadMyDatasets(), refetchPaths()]);
             } catch (error) {
               return Promise.reject(error);
             }
@@ -310,13 +338,16 @@ const Dataset = () => {
           parentId={parentId || undefined}
         />
       )}
-    </MyBox>
+      {!feConfigs?.isPlus && (
+        <ProModal isOpen={proModalOpen} onClose={() => setProModalOpen(false)} />
+      )}
+    </Flex>
   );
 };
 export async function getServerSideProps(content: any) {
   return {
     props: {
-      ...(await serviceSideProps(content, ['dataset', 'user']))
+      ...(await serviceSideProps(content, ['app', 'common', 'dataset', 'user']))
     }
   };
 }
